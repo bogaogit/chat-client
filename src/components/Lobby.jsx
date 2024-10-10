@@ -6,6 +6,7 @@ import VideoCallIcon from '@mui/icons-material/VideoCall';
 const LobbyScreen = () => {
     const [email, setEmail] = useState("");
     const [room, setRoom] = useState("");
+    const [showPage, setShowPage] = useState(false);
 
     const socket = useSocket();
     const router = useRouter();
@@ -18,6 +19,7 @@ const LobbyScreen = () => {
 
     const handleJoinRoom = useCallback((data) => {
         const { email, room } = data;
+        setShowPage(true)
         // router.push(`/room`);
     }, [router]);
 
@@ -67,6 +69,9 @@ const LobbyScreen = () => {
                     </button>
                 </form>
             </div>
+
+            {showPage && <RoomPage></RoomPage>}
+
         </div>
     )
 }
