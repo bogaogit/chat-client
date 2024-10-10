@@ -2,6 +2,7 @@ import { useSocket } from '@/context/SocketProvider';
 import { useRouter } from 'next/router';
 import React, { useCallback, useEffect, useState } from 'react';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
+import RoomPage from "@/components/RoomPage";
 
 const LobbyScreen = () => {
     const [email, setEmail] = useState("");
