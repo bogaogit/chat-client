@@ -1,8 +1,10 @@
 import LobbyScreen from '@/components/Lobby';
-import RoomPage from "@/components/RoomPage";
+import SocketProvider from "@/context/SocketProvider";
 
 export default function Home() {
     return (
-        <LobbyScreen/>
+        <SocketProvider>
+            <LobbyScreen/>
+        </SocketProvider>
     )
 }
