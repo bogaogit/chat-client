@@ -18,7 +18,7 @@ const LobbyScreen = () => {
 
     const handleJoinRoom = useCallback((data) => {
         const { email, room } = data;
-        router.push(`/room`);
+        // router.push(`/room`);
     }, [router]);
 
     useEffect(() => {
