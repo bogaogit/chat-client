@@ -7,7 +7,7 @@ import VideoCallIcon from '@mui/icons-material/VideoCall';
 import VideoPlayer from '@/components/VideoPlayer';
 import CallHandleButtons from '@/components/CallHandleButtons';
 
-const Index = () => {
+const RoomPage = () => {
     const socket = useSocket();
     const [remoteSocketId, setRemoteSocketId] = useState(null);
     const [myStream, setMyStream] = useState(null);
@@ -253,4 +253,4 @@ const Index = () => {
     )
 }
 
-export default Index;
+export default RoomPage;
