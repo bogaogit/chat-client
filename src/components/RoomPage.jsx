@@ -1,4 +1,3 @@
-
 import React, {useCallback, useEffect, useState} from 'react'
 import SimplePeer from 'simple-peer';
 import VideoPlayer from './VideoPlayer';
@@ -61,6 +60,7 @@ const RoomPage = () => {
 
     const [myStream, setMyStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState([]);
+    const [peerVideos, setPeerVideos] = useState([]);
 
 
     useEffect(async () => {
@@ -97,18 +97,16 @@ const RoomPage = () => {
         })
 
 
-
-
-
         socket.on('signal', data => {
+            console.log('SIGNAL ')
             peers[data.socket_id].signal(data.signal)
         })
-
 
 
     }, []);
 
     const addPeer = (socket_id, am_initiator) => {
+        console.log("add peer: " + socket_id)
         peers[socket_id] = new SimplePeer({
             initiator: am_initiator,
             stream: localStream,
@@ -116,6 +114,7 @@ const RoomPage = () => {
         })
 
         peers[socket_id].on('signal', data => {
+            console.log("signal from:" + socket_id)
             socket.emit('signal', {
                 signal: data,
                 socket_id: socket_id
@@ -123,13 +122,13 @@ const RoomPage = () => {
         })
 
         peers[socket_id].on('stream', stream => {
-            // let newVid = document.createElement('video')
-            // newVid.srcObject = stream
-            // newVid.id = socket_id
-            // newVid.playsinline = false
-            // newVid.autoplay = true
-            // newVid.className = "vid"
-            // videos.appendChild(newVid)
+            console.log("peer stream." + stream)
+            let newVid = document.createElement('video')
+            newVid.stream = stream
+
+
+            setPeerVideos([...peerVideos, newVid])
+
         })
     }
 
@@ -139,14 +138,14 @@ const RoomPage = () => {
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
-                    <VideoPlayer stream={myStream} name={"My Stream"} />
+                    <VideoPlayer stream={myStream} name={"My Stream"}/>
                 }
                 {
-                    remoteStreams && remoteStreams.length > 0 &&
+                    peerVideos && peerVideos.length > 0 &&
                     <>
                         {
-                            remoteStreams.map(remoteStream => (
-                                <VideoPlayer stream={remoteStream} name={"Remote Stream"} />
+                            peerVideos.map(peerVideo => (
+                                <VideoPlayer stream={peerVideo.stream} name={"Remote Stream"}/>
                             ))
                         }
                     </>
