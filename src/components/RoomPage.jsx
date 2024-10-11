@@ -13,22 +13,34 @@ const RoomPage = () => {
 
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
+    useEffect(async () => {
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: true
+        });
+        setMyStream(stream);
+
+        peer.peer.addEventListener('track', async ev => {
+            console.log(`* track`);
+            const remoteStream = ev.streams;
+
+            setRemoteStream(remoteStream[0]);
+        })
+    }, [])
+
     const handleUserJoined = useCallback(async ({email, id}) => {
         console.log(`Email ${email} joined the room!`);
 
         setRemoteSocketId(id);
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true
-        });
+
 
         //! create offer
         const offer = await peer.getOffer();
         //* send offer to remote user
         socket.emit("user:call", {to: id, offer})
         // set my stream
-        setMyStream(stream);
+
 
 
     }, []);
@@ -93,14 +105,7 @@ const RoomPage = () => {
     }, [handleNegoNeeded]);
 
 
-    useEffect(() => {
-        peer.peer.addEventListener('track', async ev => {
-            console.log(`* track`);
-            const remoteStream = ev.streams;
 
-            setRemoteStream(remoteStream[0]);
-        })
-    }, [])
 
     useEffect(() => {
             socket.on("user:joined", handleUserJoined);
