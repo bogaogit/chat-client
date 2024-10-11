@@ -10,7 +10,7 @@ const RoomPage = () => {
     const [remoteSocketId, setRemoteSocketId] = useState(null);
     const [myStream, setMyStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
-    const [callButton, setCallButton] = useState(true);
+
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
     const handleUserJoined = useCallback(async ({email, id}) => {
@@ -30,8 +30,6 @@ const RoomPage = () => {
         // set my stream
         setMyStream(stream);
 
-        //* hide the call button
-        setCallButton(false);
 
     }, []);
 
@@ -47,6 +45,8 @@ const RoomPage = () => {
 
         const ans = await peer.getAnswer(offer);
         socket.emit("call:accepted", {to: from, ans});
+
+        sendStreams()
     }, [socket]);
 
     const sendStreams = useCallback(() => {
