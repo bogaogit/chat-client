@@ -125,6 +125,7 @@ const RoomPage = () => {
             console.log("peer stream." + stream)
             let newVid = document.createElement('video')
             newVid.stream = stream
+            newVid.id = stream.socket_id
 
 
             setPeerVideos([...peerVideos, newVid])
@@ -140,12 +141,18 @@ const RoomPage = () => {
                     myStream &&
                     <VideoPlayer stream={myStream} name={"My Stream"}/>
                 }
+                PeerVideos:
                 {
                     peerVideos && peerVideos.length > 0 &&
                     <>
+                        Video count: {peerVideos.length}.
                         {
                             peerVideos.map(peerVideo => (
-                                <VideoPlayer stream={peerVideo.stream} name={"Remote Stream"}/>
+                                <>
+                                    Video from {peerVideo.id}:
+                                    <VideoPlayer stream={peerVideo.stream} name={"Remote Stream"}/>
+                                </>
+
                             ))
                         }
                     </>
