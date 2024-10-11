@@ -13,9 +13,25 @@ const RoomPage = () => {
     const [callButton, setCallButton] = useState(true);
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
-    const handleUserJoined = useCallback(({email, id}) => {
+    const handleUserJoined = useCallback(async ({email, id}) => {
         console.log(`Email ${email} joined the room!`);
+
         setRemoteSocketId(id);
+
+        const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+            video: true
+        });
+
+        //! create offer
+        const offer = await peer.getOffer();
+        //* send offer to remote user
+        socket.emit("user:call", {to: id, offer})
+        // set my stream
+        setMyStream(stream);
+
+        //* hide the call button
+        setCallButton(false);
 
     }, []);
 
@@ -111,26 +127,6 @@ const RoomPage = () => {
         ]);
 
 
-    const handleCallUser = useCallback(async () => {
-        console.log(`* handleCallUser`);
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true
-        });
-
-        //! create offer
-        const offer = await peer.getOffer();
-        //* send offer to remote user
-        socket.emit("user:call", {to: remoteSocketId, offer})
-        // set my stream
-        setMyStream(stream);
-
-        //* hide the call button
-        setCallButton(false);
-
-
-    }, [remoteSocketId, socket, callButton]);
-
     return (
         <div className='flex flex-col items-center justify-center w-screen h-screen overflow-hidden'>
             <title>Room No. </title>
@@ -148,15 +144,7 @@ const RoomPage = () => {
                     Send Stream
                 </button>
             }
-            {(remoteSocketId && callButton) &&
-                (
-                    <button className='text-xl bg-green-500 hover:bg-green-600 rounded-3xl'
-                            onClick={handleCallUser}
-                            style={{display: !remoteStream ? 'block' : 'none'}}>
-                        Call <CallIcon fontSize='medium' className=' animate-pulse scale-125'/>
-                    </button>
-                )
-            }
+
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
