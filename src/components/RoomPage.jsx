@@ -2,7 +2,6 @@ import {useSocket} from '@/context/SocketProvider';
 import React, {useCallback, useEffect, useState} from 'react'
 import peer from '@/service/peer';
 import VideoPlayer from './VideoPlayer';
-import CallIcon from '@mui/icons-material/Call';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 
 const RoomPage = () => {
@@ -77,32 +76,8 @@ const RoomPage = () => {
         sendStreams();
     }, [sendStreams]);
 
-    const handleNegoNeededIncoming = useCallback(async ({from, offer}) => {
-        console.log(`handleNegoNeededIncoming`);
-        const ans = await peer.getAnswer(offer);
-        socket.emit("peer:nego:done", {to: from, ans});
-    }, [socket]);
 
 
-    const handleNegoNeeded = useCallback(async () => {
-        console.log(`handleNegoNeeded`);
-        const offer = await peer.getOffer();
-        socket.emit("peer:nego:needed", {offer, to: remoteSocketId});
-    }, [remoteSocketId, socket]);
-
-    const handleNegoFinal = useCallback(async ({ans}) => {
-        console.log(`handleNegoFinal`);
-        await peer.setLocalDescription(ans);
-    }, [])
-
-    useEffect(() => {
-        console.log(`* negotiationneeded`);
-        peer.peer.addEventListener('negotiationneeded', handleNegoNeeded);
-
-        return () => {
-            peer.peer.removeEventListener('negotiationneeded', handleNegoNeeded);
-        }
-    }, [handleNegoNeeded]);
 
 
 
@@ -111,15 +86,12 @@ const RoomPage = () => {
             socket.on("user:joined", handleUserJoined);
             socket.on("incoming:call", handleIncomingCall);
             socket.on("call:accepted", handleCallAccepted);
-            socket.on("peer:nego:needed", handleNegoNeededIncoming);
-            socket.on("peer:nego:final", handleNegoFinal);
 
             return () => {
                 socket.off("user:joined", handleUserJoined);
                 socket.off("incoming:call", handleIncomingCall);
                 socket.off("call:accepted", handleCallAccepted);
-                socket.off("peer:nego:needed", handleNegoNeededIncoming);
-                socket.off("peer:nego:final", handleNegoFinal);
+
             };
         },
         [
@@ -127,8 +99,7 @@ const RoomPage = () => {
             handleUserJoined,
             handleIncomingCall,
             handleCallAccepted,
-            handleNegoNeededIncoming,
-            handleNegoFinal
+
         ]);
 
 
