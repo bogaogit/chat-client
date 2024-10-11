@@ -17,7 +17,6 @@ const RoomPage = () => {
         console.log(`Email ${email} joined the room!`);
         setRemoteSocketId(id);
 
-        handleCallUser()
     }, []);
 
     const handleIncomingCall = useCallback(async ({from, offer}) => {
@@ -149,7 +148,15 @@ const RoomPage = () => {
                     Send Stream
                 </button>
             }
-           
+            {(remoteSocketId && callButton) &&
+                (
+                    <button className='text-xl bg-green-500 hover:bg-green-600 rounded-3xl'
+                            onClick={handleCallUser}
+                            style={{display: !remoteStream ? 'block' : 'none'}}>
+                        Call <CallIcon fontSize='medium' className=' animate-pulse scale-125'/>
+                    </button>
+                )
+            }
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
