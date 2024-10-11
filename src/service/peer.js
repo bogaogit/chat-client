@@ -1,17 +1,14 @@
-
-export const configuration = {
-    iceServers: [{
-        urls: [
-            "stun:stun.l.google.com:19302",
-            "stun:global.stun.twilio.com:3478",
-        ]
-    }]
-}
-
 class PeerService {
     constructor() {
         if (typeof window !== 'undefined' && !this.peer) {
-            this.peer = new RTCPeerConnection(configuration)
+            this.peer = new RTCPeerConnection({
+                iceServers: [{
+                    urls: [
+                        "stun:stun.l.google.com:19302",
+                        "stun:global.stun.twilio.com:3478",
+                    ]
+                }]
+            })
         }
     }
 
