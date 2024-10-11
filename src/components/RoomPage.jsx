@@ -126,10 +126,13 @@ const RoomPage = () => {
             let newVid = document.createElement('video')
             newVid.stream = stream
             newVid.id = stream.socket_id
-
-
-            setPeerVideos([...peerVideos, newVid])
-
+            
+            setPeerVideos(prevPeerVideos => {
+                const newList = [...prevPeerVideos, newVid];
+                console.log('Updated prevPeerVideos:', newVid.id); // This logs the updated state immediately
+                console.log('newList count:', newList.length); // This logs the updated state immediately
+                return newList;
+            });
         })
     }
 
