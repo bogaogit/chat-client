@@ -1,6 +1,7 @@
 import {useSocket} from '@/context/SocketProvider';
 import React, {useCallback, useEffect, useState} from 'react'
 import peer from '@/service/peer';
+import VideoPlayer from '@/components/VideoPlayer';
 import CallIcon from '@mui/icons-material/Call';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 
@@ -212,11 +213,11 @@ const RoomPage = () => {
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
-                    <video src={myStream}></video>
+                    <VideoPlayer stream={myStream} name={"My Stream"} isAudioMute={isAudioMute} />
                 }
                 {
                     remoteStream &&
-                    <video src={remoteStream}></video>
+                    <VideoPlayer stream={remoteStream} name={"Remote Stream"} isAudioMute={isAudioMute} />
                 }
             </div>
 
