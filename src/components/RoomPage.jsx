@@ -104,26 +104,6 @@ const RoomPage = () => {
         ]);
 
 
-    useEffect(() => {
-        socket.on("call:end", ({from}) => {
-            if (from === remoteSocketId) {
-                peer.peer.close();
-
-                if (myStream) {
-                    myStream.getTracks().forEach(track => track.stop());
-                    setMyStream(null);
-                }
-
-                setRemoteStream(null);
-                setRemoteSocketId(null);
-            }
-        });
-
-        return () => {
-            socket.off("call:end");
-        }
-    }, [remoteSocketId, myStream, socket]);
-
     //* for disappearing call button
     useEffect(() => {
         socket.on("call:initiated", ({from}) => {
@@ -167,22 +147,6 @@ const RoomPage = () => {
         //* Inform the remote user to hide their "CALL" button
         socket.emit("call:initiated", {to: remoteSocketId});
     }, [remoteSocketId, socket, isAudioMute, isVideoOnHold, callButton]);
-
-    const handleEndCall = useCallback(() => {
-        peer.peer.close();
-
-        if (myStream) {
-            myStream.getTracks().forEach(track => track.stop());
-            setMyStream(null);
-        }
-
-        setRemoteStream(null);
-
-        if (remoteSocketId) {
-            socket.emit("call:end", {to: remoteSocketId});
-        }
-        setRemoteSocketId(null);
-    }, [myStream, remoteSocketId, socket]);
 
     return (
         <div className='flex flex-col items-center justify-center w-screen h-screen overflow-hidden'>
