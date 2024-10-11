@@ -1,15 +1,14 @@
 import {useSocket} from '@/context/SocketProvider';
 import React, {useCallback, useEffect, useState} from 'react'
-import peer from '@/service/peer';
+import peerService from '@/service/peer';
 import VideoPlayer from './VideoPlayer';
-import CallIcon from '@mui/icons-material/Call';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 
 const RoomPage = () => {
     const socket = useSocket();
     const [remoteSocketId, setRemoteSocketId] = useState(null);
     const [myStream, setMyStream] = useState(null);
-    const [remoteStream, setRemoteStream] = useState(null);
+    const [remoteStreams, setRemoteStreams] = useState([]);
 
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
@@ -20,11 +19,13 @@ const RoomPage = () => {
         });
         setMyStream(stream);
 
-        peer.peer.addEventListener('track', async ev => {
+        peerService.peer.addEventListener('track', async ev => {
             console.log(`* track`);
-            const remoteStream = ev.streams;
 
-            setRemoteStream(remoteStream[0]);
+            setRemoteStreams([
+                ...remoteStreams,
+                ev.streams[0]
+            ]);
         })
     }, [])
 
@@ -36,7 +37,7 @@ const RoomPage = () => {
 
 
         //! create offer
-        const offer = await peer.getOffer();
+        const offer = await peerService.getOffer();
         //* send offer to remote user
         socket.emit("user:call", {to: id, offer})
         // set my stream
@@ -55,7 +56,7 @@ const RoomPage = () => {
         });
         setMyStream(stream);
 
-        const ans = await peer.getAnswer(offer);
+        const ans = await peerService.getAnswer(offer);
         socket.emit("call:accepted", {to: from, ans});
 
         sendStreams()
@@ -64,14 +65,14 @@ const RoomPage = () => {
     const sendStreams = useCallback(() => {
         console.log(`sendStreams`);
         for (const track of myStream.getTracks()) {
-            peer.peer.addTrack(track, myStream);
+            peerService.peer.addTrack(track, myStream);
         }
         setIsSendButtonVisible(false);
     }, [myStream]);
 
     const handleCallAccepted = useCallback(({from, ans}) => {
         console.log(`handleCallAccepted`);
-        peer.setLocalDescription(ans);
+        peerService.setLocalDescription(ans);
         //! console.log("Call Accepted");
 
         sendStreams();
@@ -79,28 +80,28 @@ const RoomPage = () => {
 
     const handleNegoNeededIncoming = useCallback(async ({from, offer}) => {
         console.log(`handleNegoNeededIncoming`);
-        const ans = await peer.getAnswer(offer);
+        const ans = await peerService.getAnswer(offer);
         socket.emit("peer:nego:done", {to: from, ans});
     }, [socket]);
 
 
     const handleNegoNeeded = useCallback(async () => {
         console.log(`handleNegoNeeded`);
-        const offer = await peer.getOffer();
+        const offer = await peerService.getOffer();
         socket.emit("peer:nego:needed", {offer, to: remoteSocketId});
     }, [remoteSocketId, socket]);
 
     const handleNegoFinal = useCallback(async ({ans}) => {
         console.log(`handleNegoFinal`);
-        await peer.setLocalDescription(ans);
+        await peerService.setLocalDescription(ans);
     }, [])
 
     useEffect(() => {
         console.log(`* negotiationneeded`);
-        peer.peer.addEventListener('negotiationneeded', handleNegoNeeded);
+        peerService.peer.addEventListener('negotiationneeded', handleNegoNeeded);
 
         return () => {
-            peer.peer.removeEventListener('negotiationneeded', handleNegoNeeded);
+            peerService.peer.removeEventListener('negotiationneeded', handleNegoNeeded);
         }
     }, [handleNegoNeeded]);
 
@@ -144,7 +145,7 @@ const RoomPage = () => {
                 mmd:text-sm mt-5 mb-4 msm:max-w-[100px] text-center'>
                 {remoteSocketId ? "Connected With Remote User!" : "No One In Room"}
             </h4>
-            {(remoteStream && remoteSocketId && isSendButtonVisible) &&
+            {(remoteSocketId && isSendButtonVisible) &&
                 <button className='bg-green-500 hover:bg-green-600' onClick={sendStreams}>
                     Send Stream
                 </button>
@@ -156,8 +157,15 @@ const RoomPage = () => {
                     <VideoPlayer stream={myStream} name={"My Stream"} />
                 }
                 {
-                    remoteStream &&
-                    <VideoPlayer stream={remoteStream} name={"Remote Stream"} />
+                    remoteStreams && remoteStreams.length > 0 &&
+                    <>
+                        {
+                            remoteStreams.map(remoteStream => (
+                                <VideoPlayer stream={remoteStream} name={"Remote Stream"} />
+                            ))
+                        }
+                    </>
+
                 }
             </div>
 
