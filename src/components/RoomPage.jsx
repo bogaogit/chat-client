@@ -10,8 +10,6 @@ const RoomPage = () => {
     const [remoteSocketId, setRemoteSocketId] = useState(null);
     const [myStream, setMyStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
-    const [isAudioMute, setIsAudioMute] = useState(false);
-    const [isVideoOnHold, setIsVideoOnHold] = useState(false);
     const [callButton, setCallButton] = useState(true);
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
@@ -124,15 +122,7 @@ const RoomPage = () => {
             video: true
         });
 
-        if (isAudioMute) {
-            const audioTracks = stream.getAudioTracks();
-            audioTracks.forEach(track => track.enabled = false);
-        }
 
-        if (isVideoOnHold) {
-            const videoTracks = stream.getVideoTracks();
-            videoTracks.forEach(track => track.enabled = false);
-        }
 
         //! create offer
         const offer = await peer.getOffer();
@@ -146,7 +136,7 @@ const RoomPage = () => {
 
         //* Inform the remote user to hide their "CALL" button
         socket.emit("call:initiated", {to: remoteSocketId});
-    }, [remoteSocketId, socket, isAudioMute, isVideoOnHold, callButton]);
+    }, [remoteSocketId, socket, callButton]);
 
     return (
         <div className='flex flex-col items-center justify-center w-screen h-screen overflow-hidden'>
@@ -177,11 +167,11 @@ const RoomPage = () => {
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
-                    <VideoPlayer stream={myStream} name={"My Stream"} isAudioMute={isAudioMute} />
+                    <VideoPlayer stream={myStream} name={"My Stream"} />
                 }
                 {
                     remoteStream &&
-                    <VideoPlayer stream={remoteStream} name={"Remote Stream"} isAudioMute={isAudioMute} />
+                    <VideoPlayer stream={remoteStream} name={"Remote Stream"} />
                 }
             </div>
 
