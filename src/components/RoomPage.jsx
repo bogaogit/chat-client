@@ -14,11 +14,12 @@ const RoomPage = () => {
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
     const handleUserJoined = useCallback(({email, id}) => {
-        //! console.log(`Email ${email} joined the room!`);
+        console.log(`Email ${email} joined the room!`);
         setRemoteSocketId(id);
     }, []);
 
     const handleIncomingCall = useCallback(async ({from, offer}) => {
+        console.log(`handleIncomingCall ${from}`);
         setRemoteSocketId(from);
         //! console.log(`incoming call from ${from} with offer ${offer}`);
         const stream = await navigator.mediaDevices.getUserMedia({
@@ -32,6 +33,7 @@ const RoomPage = () => {
     }, [socket]);
 
     const sendStreams = useCallback(() => {
+        console.log(`sendStreams`);
         for (const track of myStream.getTracks()) {
             peer.peer.addTrack(track, myStream);
         }
@@ -39,6 +41,7 @@ const RoomPage = () => {
     }, [myStream]);
 
     const handleCallAccepted = useCallback(({from, ans}) => {
+        console.log(`handleCallAccepted`);
         peer.setLocalDescription(ans);
         //! console.log("Call Accepted");
 
@@ -46,21 +49,25 @@ const RoomPage = () => {
     }, [sendStreams]);
 
     const handleNegoNeededIncoming = useCallback(async ({from, offer}) => {
+        console.log(`handleNegoNeededIncoming`);
         const ans = await peer.getAnswer(offer);
         socket.emit("peer:nego:done", {to: from, ans});
     }, [socket]);
 
 
     const handleNegoNeeded = useCallback(async () => {
+        console.log(`handleNegoNeeded`);
         const offer = await peer.getOffer();
         socket.emit("peer:nego:needed", {offer, to: remoteSocketId});
     }, [remoteSocketId, socket]);
 
     const handleNegoFinal = useCallback(async ({ans}) => {
+        console.log(`handleNegoFinal`);
         await peer.setLocalDescription(ans);
     }, [])
 
     useEffect(() => {
+        console.log(`* negotiationneeded`);
         peer.peer.addEventListener('negotiationneeded', handleNegoNeeded);
 
         return () => {
@@ -71,8 +78,9 @@ const RoomPage = () => {
 
     useEffect(() => {
         peer.peer.addEventListener('track', async ev => {
+            console.log(`* track`);
             const remoteStream = ev.streams;
-            console.log("GOT TRACKS!");
+
             setRemoteStream(remoteStream[0]);
         })
     }, [])
@@ -121,8 +129,6 @@ const RoomPage = () => {
             audio: true,
             video: true
         });
-
-
 
         //! create offer
         const offer = await peer.getOffer();
