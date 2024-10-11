@@ -1,7 +1,7 @@
 import {useSocket} from '@/context/SocketProvider';
 import React, {useCallback, useEffect, useState} from 'react'
 import peer from '@/service/peer';
-import VideoPlayer from '@/components/VideoPlayer';
+import VideoPlayer from './VideoPlayer';
 import CallIcon from '@mui/icons-material/Call';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
 
