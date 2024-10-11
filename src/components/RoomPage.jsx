@@ -10,15 +10,19 @@ const RoomPage = () => {
     const [remoteSocketId, setRemoteSocketId] = useState(null);
     const [myStream, setMyStream] = useState(null);
     const [remoteStream, setRemoteStream] = useState(null);
+    const [isAudioMute, setIsAudioMute] = useState(false);
+    const [isVideoOnHold, setIsVideoOnHold] = useState(false);
     const [callButton, setCallButton] = useState(true);
     const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
     const handleUserJoined = useCallback(({email, id}) => {
+        //! console.log(`Email ${email} joined the room!`);
         setRemoteSocketId(id);
     }, []);
 
     const handleIncomingCall = useCallback(async ({from, offer}) => {
         setRemoteSocketId(from);
+        //! console.log(`incoming call from ${from} with offer ${offer}`);
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: true,
             video: true
@@ -43,6 +47,30 @@ const RoomPage = () => {
         sendStreams();
     }, [sendStreams]);
 
+    const handleNegoNeededIncoming = useCallback(async ({from, offer}) => {
+        const ans = await peer.getAnswer(offer);
+        socket.emit("peer:nego:done", {to: from, ans});
+    }, [socket]);
+
+
+    const handleNegoNeeded = useCallback(async () => {
+        const offer = await peer.getOffer();
+        socket.emit("peer:nego:needed", {offer, to: remoteSocketId});
+    }, [remoteSocketId, socket]);
+
+    const handleNegoFinal = useCallback(async ({ans}) => {
+        await peer.setLocalDescription(ans);
+    }, [])
+
+    useEffect(() => {
+        peer.peer.addEventListener('negotiationneeded', handleNegoNeeded);
+
+        return () => {
+            peer.peer.removeEventListener('negotiationneeded', handleNegoNeeded);
+        }
+    }, [handleNegoNeeded]);
+
+
     useEffect(() => {
         peer.peer.addEventListener('track', async ev => {
             const remoteStream = ev.streams;
@@ -55,13 +83,15 @@ const RoomPage = () => {
             socket.on("user:joined", handleUserJoined);
             socket.on("incoming:call", handleIncomingCall);
             socket.on("call:accepted", handleCallAccepted);
-
+            socket.on("peer:nego:needed", handleNegoNeededIncoming);
+            socket.on("peer:nego:final", handleNegoFinal);
 
             return () => {
                 socket.off("user:joined", handleUserJoined);
                 socket.off("incoming:call", handleIncomingCall);
                 socket.off("call:accepted", handleCallAccepted);
-
+                socket.off("peer:nego:needed", handleNegoNeededIncoming);
+                socket.off("peer:nego:final", handleNegoFinal);
             };
         },
         [
@@ -69,6 +99,8 @@ const RoomPage = () => {
             handleUserJoined,
             handleIncomingCall,
             handleCallAccepted,
+            handleNegoNeededIncoming,
+            handleNegoFinal
         ]);
 
 
@@ -92,6 +124,16 @@ const RoomPage = () => {
             video: true
         });
 
+        if (isAudioMute) {
+            const audioTracks = stream.getAudioTracks();
+            audioTracks.forEach(track => track.enabled = false);
+        }
+
+        if (isVideoOnHold) {
+            const videoTracks = stream.getVideoTracks();
+            videoTracks.forEach(track => track.enabled = false);
+        }
+
         //! create offer
         const offer = await peer.getOffer();
         //* send offer to remote user
@@ -104,7 +146,7 @@ const RoomPage = () => {
 
         //* Inform the remote user to hide their "CALL" button
         socket.emit("call:initiated", {to: remoteSocketId});
-    }, [remoteSocketId, socket, callButton]);
+    }, [remoteSocketId, socket, isAudioMute, isVideoOnHold, callButton]);
 
     return (
         <div className='flex flex-col items-center justify-center w-screen h-screen overflow-hidden'>
@@ -135,11 +177,11 @@ const RoomPage = () => {
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
-                    <VideoPlayer stream={myStream} name={"My Stream"} />
+                    <VideoPlayer stream={myStream} name={"My Stream"} isAudioMute={isAudioMute} />
                 }
                 {
                     remoteStream &&
-                    <VideoPlayer stream={remoteStream} name={"Remote Stream"} />
+                    <VideoPlayer stream={remoteStream} name={"Remote Stream"} isAudioMute={isAudioMute} />
                 }
             </div>
 
