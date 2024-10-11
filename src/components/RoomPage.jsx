@@ -1,156 +1,141 @@
-import {useSocket} from '@/context/SocketProvider';
+
 import React, {useCallback, useEffect, useState} from 'react'
-import peerService from '@/service/peer';
+import SimplePeer from 'simple-peer';
 import VideoPlayer from './VideoPlayer';
 import VideoCallIcon from '@mui/icons-material/VideoCall';
+import {io} from "socket.io-client";
+
+const configuration = {
+    // Using From https://www.metered.ca/tools/openrelay/
+    "iceServers": [
+        {
+            urls: "stun:openrelay.metered.ca:80"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:80",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:443",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        },
+        {
+            urls: "turn:openrelay.metered.ca:443?transport=tcp",
+            username: "openrelayproject",
+            credential: "openrelayproject"
+        }
+    ]
+}
+
+let constraints = {
+    audio: true,
+    video: {
+        width: {
+            max: 300
+        },
+        height: {
+            max: 300
+        }
+    }
+}
+
+constraints.video.facingMode = {
+    ideal: "user"
+}
 
 const RoomPage = () => {
-    const socket = useSocket();
-    const [remoteSocketId, setRemoteSocketId] = useState(null);
+    /**
+     * Socket.io socket
+     */
+    let socket;
+    /**
+     * The stream object used to send media
+     */
+    let localStream = null;
+    /**
+     * All peer connections
+     */
+    let peers = {}
+
     const [myStream, setMyStream] = useState(null);
     const [remoteStreams, setRemoteStreams] = useState([]);
 
-    const [isSendButtonVisible, setIsSendButtonVisible] = useState(true);
 
     useEffect(async () => {
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true
-        });
-        setMyStream(stream);
+        // enabling the camera at startup
+        navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+            console.log('Received local stream');
 
-        peerService.peer.addEventListener('track', async ev => {
-            console.log(`* track`);
 
-            setRemoteStreams([
-                ...remoteStreams,
-                ev.streams[0]
-            ]);
-        })
+            localStream = stream;
+
+            setMyStream(stream)
+
+            if (!socket) {
+                init()
+            }
+
+
+        }).catch(e => alert(`getusermedia error ${e.name}`))
     }, [])
 
-    const handleUserJoined = useCallback(async ({email, id}) => {
-        console.log(`Email ${email} joined the room!`);
+    const init = useCallback(async () => {
+        socket = io("chat-server-jrep.onrender.com/")
 
-        setRemoteSocketId(id);
+        socket.on('initReceive', socket_id => {
+            console.log('INIT RECEIVE ' + socket_id)
+            addPeer(socket_id, false)
+
+            socket.emit('initSend', socket_id)
+        })
+
+        socket.on('initSend', socket_id => {
+            console.log('INIT SEND ' + socket_id)
+            addPeer(socket_id, true)
+        })
 
 
 
-        //! create offer
-        const offer = await peerService.getOffer();
-        //* send offer to remote user
-        socket.emit("user:call", {to: id, offer})
-        // set my stream
+
+
+        socket.on('signal', data => {
+            peers[data.socket_id].signal(data.signal)
+        })
 
 
 
     }, []);
 
-    const handleIncomingCall = useCallback(async ({from, offer}) => {
-        console.log(`handleIncomingCall ${from}`);
-        setRemoteSocketId(from);
-        //! console.log(`incoming call from ${from} with offer ${offer}`);
-        const stream = await navigator.mediaDevices.getUserMedia({
-            audio: true,
-            video: true
-        });
-        setMyStream(stream);
+    const addPeer = (socket_id, am_initiator) => {
+        peers[socket_id] = new SimplePeer({
+            initiator: am_initiator,
+            stream: localStream,
+            config: configuration
+        })
 
-        const ans = await peerService.getAnswer(offer);
-        socket.emit("call:accepted", {to: from, ans});
+        peers[socket_id].on('signal', data => {
+            socket.emit('signal', {
+                signal: data,
+                socket_id: socket_id
+            })
+        })
 
-        sendStreams()
-    }, [socket]);
-
-    const sendStreams = useCallback(() => {
-        console.log(`sendStreams`);
-        for (const track of myStream.getTracks()) {
-            peerService.peer.addTrack(track, myStream);
-        }
-        setIsSendButtonVisible(false);
-    }, [myStream]);
-
-    const handleCallAccepted = useCallback(({from, ans}) => {
-        console.log(`handleCallAccepted`);
-        peerService.setLocalDescription(ans);
-        //! console.log("Call Accepted");
-
-        sendStreams();
-    }, [sendStreams]);
-
-    const handleNegoNeededIncoming = useCallback(async ({from, offer}) => {
-        console.log(`handleNegoNeededIncoming`);
-        const ans = await peerService.getAnswer(offer);
-        socket.emit("peer:nego:done", {to: from, ans});
-    }, [socket]);
-
-
-    const handleNegoNeeded = useCallback(async () => {
-        console.log(`handleNegoNeeded`);
-        const offer = await peerService.getOffer();
-        socket.emit("peer:nego:needed", {offer, to: remoteSocketId});
-    }, [remoteSocketId, socket]);
-
-    const handleNegoFinal = useCallback(async ({ans}) => {
-        console.log(`handleNegoFinal`);
-        await peerService.setLocalDescription(ans);
-    }, [])
-
-    useEffect(() => {
-        console.log(`* negotiationneeded`);
-        peerService.peer.addEventListener('negotiationneeded', handleNegoNeeded);
-
-        return () => {
-            peerService.peer.removeEventListener('negotiationneeded', handleNegoNeeded);
-        }
-    }, [handleNegoNeeded]);
-
-
-
-
-    useEffect(() => {
-            socket.on("user:joined", handleUserJoined);
-            socket.on("incoming:call", handleIncomingCall);
-            socket.on("call:accepted", handleCallAccepted);
-            socket.on("peer:nego:needed", handleNegoNeededIncoming);
-            socket.on("peer:nego:final", handleNegoFinal);
-
-            return () => {
-                socket.off("user:joined", handleUserJoined);
-                socket.off("incoming:call", handleIncomingCall);
-                socket.off("call:accepted", handleCallAccepted);
-                socket.off("peer:nego:needed", handleNegoNeededIncoming);
-                socket.off("peer:nego:final", handleNegoFinal);
-            };
-        },
-        [
-            socket,
-            handleUserJoined,
-            handleIncomingCall,
-            handleCallAccepted,
-            handleNegoNeededIncoming,
-            handleNegoFinal
-        ]);
+        peers[socket_id].on('stream', stream => {
+            // let newVid = document.createElement('video')
+            // newVid.srcObject = stream
+            // newVid.id = socket_id
+            // newVid.playsinline = false
+            // newVid.autoplay = true
+            // newVid.className = "vid"
+            // videos.appendChild(newVid)
+        })
+    }
 
 
     return (
         <div className='flex flex-col items-center justify-center w-screen h-screen overflow-hidden'>
-            <title>Room No. </title>
-            <h1 className='absolute top-0 left-0 text-5xl
-            text-center font-josefin tracking-tighter mt-5 ml-5 mmd:text-xl mxs:text-sm'>Video
-                <VideoCallIcon sx={{fontSize: 50, color: 'rgb(30,220,30)'}}/>
-                Peers
-            </h1>
-            <h4 className='font-bold text-xl md:text-2xl
-                mmd:text-sm mt-5 mb-4 msm:max-w-[100px] text-center'>
-                {remoteSocketId ? "Connected With Remote User!" : "No One In Room"}
-            </h4>
-            {(remoteSocketId && isSendButtonVisible) &&
-                <button className='bg-green-500 hover:bg-green-600' onClick={sendStreams}>
-                    Send Stream
-                </button>
-            }
-
             <div className="flex flex-col w-full items-center justify-center overflow-hidden">
                 {
                     myStream &&
