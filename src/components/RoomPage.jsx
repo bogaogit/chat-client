@@ -110,21 +110,8 @@ const RoomPage = () => {
         ]);
 
 
-    //* for disappearing call button
-    useEffect(() => {
-        socket.on("call:initiated", ({from}) => {
-            if (from === remoteSocketId) {
-                setCallButton(false);
-            }
-        });
-
-        return () => {
-            socket.off("call:initiated");
-        }
-    }, [socket, remoteSocketId]);
-
-
     const handleCallUser = useCallback(async () => {
+        console.log(`* handleCallUser`);
         const stream = await navigator.mediaDevices.getUserMedia({
             audio: true,
             video: true
@@ -140,8 +127,7 @@ const RoomPage = () => {
         //* hide the call button
         setCallButton(false);
 
-        //* Inform the remote user to hide their "CALL" button
-        socket.emit("call:initiated", {to: remoteSocketId});
+
     }, [remoteSocketId, socket, callButton]);
 
     return (
